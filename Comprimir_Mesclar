@@ -1,0 +1,91 @@
+import os
+from pypdf import PdfReader, PdfWriter
+
+print("="*50)
+print("Compressor de PDF - Dissertacao")
+print("="*50)
+print()
+
+# Arquivos
+arquivo_entrada = "Dissertacao_Lucio.pdf"
+arquivo_termo = "Termo_de_Autorizacao_Divulgacao_de_Trabalho_Academico_2_assinado_final.pdf"
+arquivo_saida = "dissertacao_final.pdf"
+
+# Verifica se os arquivos existem
+if not os.path.exists(arquivo_entrada):
+    print(f"❌ Erro: {arquivo_entrada} nao encontrado!")
+    exit()
+
+# Mostra tamanho original
+tamanho_original = os.path.getsize(arquivo_entrada) / (1024 * 1024)
+print(f"Tamanho original: {tamanho_original:.2f} MB")
+print()
+
+# Comprime o PDF principal com MÁXIMA COMPRESSÃO
+print("Comprimindo PDF com maxima compressao...")
+reader = PdfReader(arquivo_entrada)
+writer = PdfWriter()
+
+# Adiciona páginas
+for page in reader.pages:
+    writer.add_page(page)
+
+# Comprime com nível 0 = MÁXIMA COMPRESSÃO
+for page in writer.pages:
+    page.compress_content_streams(level=0)
+
+# Salva comprimido
+with open("temp_comprimido.pdf", "wb") as f:
+    writer.write(f)
+
+tamanho_comprimido = os.path.getsize("temp_comprimido.pdf") / (1024 * 1024)
+print(f"Tamanho apos compressao: {tamanho_comprimido:.2f} MB")
+print()
+
+# Verifica se atingiu o objetivo
+if tamanho_comprimido > 14.8:
+    print("⚠️ Compressao PyPDF nao foi suficiente.")
+    print("Recomendo usar o script com Ghostscript.")
+    print()
+
+# Mescla com termo se existir
+if os.path.exists(arquivo_termo):
+    print("Mesclando com termo de autorizacao...")
+    writer_final = PdfWriter()
+    
+    # Adiciona PDF comprimido
+    reader_comp = PdfReader("temp_comprimido.pdf")
+    for page in reader_comp.pages:
+        writer_final.add_page(page)
+    
+    # Adiciona termo
+    reader_termo = PdfReader(arquivo_termo)
+    for page in reader_termo.pages:
+        writer_final.add_page(page)
+    
+    # Salva resultado final
+    with open(arquivo_saida, "wb") as f:
+        writer_final.write(f)
+    
+    # Remove temporário
+    os.remove("temp_comprimido.pdf")
+    
+    tamanho_final = os.path.getsize(arquivo_saida) / (1024 * 1024)
+    print(f"Tamanho final: {tamanho_final:.2f} MB")
+else:
+    # Se não tiver termo, apenas renomeia
+    os.rename("temp_comprimido.pdf", arquivo_saida)
+    tamanho_final = tamanho_comprimido
+    print(f"Tamanho final: {tamanho_final:.2f} MB")
+    print("⚠️ Aviso: Termo de autorizacao nao encontrado")
+
+print()
+print("="*50)
+if tamanho_final <= 15:
+    print(f"✅ SUCESSO! Arquivo salvo como: {arquivo_saida}")
+else:
+    print(f"⚠️ Arquivo salvo como: {arquivo_saida}")
+    print(f"   Mas ainda esta acima de 15 MB ({tamanho_final:.2f} MB)")
+    print(f"   Use o script Ghostscript para compressao mais forte!")
+print(f"Reducao: {((tamanho_original - tamanho_final) / tamanho_original * 100):.1f}%")
+print("="*50)
